@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HourKeep — Time tracking that can't 15× your bill</title>
+<meta name="description" content="Flat-fee time tracking & invoicing for consultancies and agencies fleeing the Harvest price shock. $19–99/mo flat, unlimited projects, one-click Harvest import, free exports forever.">
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161e; --line:#232a36; --txt:#e8ecf3; --dim:#9aa6b8;
+    --accent:#4fd1a5; --accent2:#38b2f8; --danger:#ff7a7a;
+    --radius:14px; font-size:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.6}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  a{color:inherit;text-decoration:none}
+
+  nav{position:sticky;top:0;z-index:50;background:rgba(12,15,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{font-weight:700;font-size:1.25rem;letter-spacing:-.02em}
+  .logo span{color:var(--accent)}
+  .nav-links{display:flex;gap:26px;align-items:center;font-size:.95rem;color:var(--dim)}
+  .nav-links a:hover{color:var(--txt)}
+  .nav-cta{border:1px solid var(--accent);color:var(--accent)!important;padding:8px 18px;border-radius:99px;font-weight:600}
+  .nav-cta:hover{background:var(--accent);color:#08110d!important}
+
+  header{padding:96px 0 72px;text-align:center;background:
+    radial-gradient(700px 340px at 50% -60px, rgba(79,209,165,.13), transparent),
+    radial-gradient(500px 300px at 80% 10%, rgba(56,178,248,.08), transparent)}
+  .kicker{display:inline-block;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(79,209,165,.35);border-radius:99px;padding:6px 16px;margin-bottom:28px}
+  h1{font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.12;letter-spacing:-.03em;max-width:840px;margin:0 auto 22px}
+  h1 strong{color:var(--accent)}
+  .sub{max-width:660px;margin:0 auto 34px;color:var(--dim);font-size:1.12rem}
+  .sub em{color:var(--txt);font-style:normal;font-weight:600}
+  .signup{display:flex;gap:10px;max-width:480px;margin:0 auto}
+  .signup input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;color:var(--txt);font-size:1rem}
+  .signup input:focus{outline:none;border-color:var(--accent)}
+  .signup button{background:var(--accent);color:#08110d;border:none;border-radius:12px;padding:14px 26px;font-weight:700;font-size:1rem;cursor:pointer;white-space:nowrap}
+  .signup button:hover{filter:brightness(1.1)}
+  .microcopy{margin-top:14px;font-size:.85rem;color:var(--dim)}
+
+  .shock{max-width:760px;margin:56px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px 30px;text-align:left}
+  .shock p.t{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  .bills{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+  .bill{flex:1;min-width:200px;border:1px solid var(--line);border-radius:10px;padding:16px 18px;text-align:center}
+  .bill small{display:block;color:var(--dim);font-size:.8rem;margin-bottom:4px}
+  .bill b{font-size:1.05rem}
+  .bill .was{color:var(--txt)} .bill .now{color:var(--danger);text-decoration:line-through}
+  .shock .src{margin-top:14px;font-size:.78rem;color:var(--dim)}
+
+  section{padding:88px 0}
+  .label{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+  h2{font-size:clamp(1.6rem,3.4vw,2.3rem);letter-spacing:-.02em;line-height:1.2;margin-bottom:16px}
+  .lede{color:var(--dim);max-width:640px;margin-bottom:44px}
+
+  .promises{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+  .promise{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:30px}
+  .promise .num{color:var(--accent);font-weight:700;font-size:.9rem}
+  .promise h3{margin:12px 0 8px;font-size:1.15rem}
+  .promise p{color:var(--dim);font-size:.95rem}
+
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:22px}
+  .feat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+  .feat .ic{font-size:1.5rem}
+  .feat h3{font-size:1.05rem;margin:12px 0 6px}
+  .feat p{color:var(--dim);font-size:.92rem}
+
+  table.pricing{width:100%;border-collapse:collapse;margin-top:8px}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px}
+  .plan{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:32px;text-align:center;position:relative}
+  .plan.hot{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), 0 18px 50px -20px rgba(79,209,165,.35)}
+  .plan .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#08110d;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 14px;border-radius:99px}
+  .plan h3{font-size:1.05rem;color:var(--dim);font-weight:600}
+  .plan .price{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;margin:10px 0 2px}
+  .plan .price small{font-size:.95rem;color:var(--dim);font-weight:400}
+  .plan ul{list-style:none;margin:20px 0 26px;text-align:left;font-size:.93rem;color:var(--dim)}
+  .plan li{padding:7px 0;border-bottom:1px dashed var(--line)}
+  .plan li::before{content:"✓";color:var(--accent);font-weight:700;margin-right:10px}
+  .plan a.btn{display:block;background:var(--accent);color:#08110d;font-weight:700;border-radius:10px;padding:13px}
+  .plan a.btn:hover{filter:brightness(1.1)}
+  .grand{margin-top:18px;text-align:center;color:var(--dim);font-size:.88rem}
+
+  .steps{counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:30px;counter-increment:s}
+  .step::before{content:counter(s,decimal-leading-zero);color:var(--accent);font-weight:800;font-size:1rem}
+  .step h3{margin:10px 0 8px;font-size:1.08rem}
+  .step p{color:var(--dim);font-size:.94rem}
+
+  form.mid{display:flex;gap:10px;max-width:480px;margin:34px auto 0}
+  form.mid input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;color:var(--txt);font-size:1rem}
+  form.mid button{background:var(--accent);color:#08110d;border:none;border-radius:12px;padding:14px 26px;font-weight:700;cursor:pointer}
+
+  footer{border-top:1px solid var(--line);padding:36px 0;color:var(--dim);font-size:.85rem}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer a:hover{color:var(--txt)}
+
+  @media(max-width:720px){
+    .nav-links a:not(.nav-cta){display:none}
+    .signup,.mid{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#">Hour<span>Keep</span></a>
+    <div class="nav-links">
+      <a href="#why">Why</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#switch">Switch</a>
+      <a class="nav-cta" href="#waitlist">Join waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">For consultancies &amp; agencies · 2–50 people</div>
+    <h1>Time tracking that <strong>can't 15× your bill.</strong></h1>
+    <p class="sub">Harvest users opened renewal notices to find bills up <em>16× higher overnight</em>. HourKeep is <em>flat-fee forever</em> — unlimited projects, unlimited clients, no usage fees, no surprises. Your Harvest history imports in one click.</p>
+    <form class="signup" id="waitlist-form" action="https://formsubmit.co/deepanshu.masum@gmail.com" method="POST">
+      <input type="email" name="email" placeholder="you@yourstudio.com" required>
+      <button type="submit">Get early access</button>
+    </form>
+    <p class="microcopy">Free white-glove migration from Harvest · No credit card · Cancel anytime</p>
+
+    <div class="shock">
+      <p class="t">What Harvest customers actually received in 2026</p>
+      <div class="bills">
+        <div class="bill"><small>UK consultancy (BBC News)</small><b><span class="was">$130</span> → <span class="now">$2,110</span>/mo</b></div>
+        <div class="bill"><small>20-seat firm (G2 review)</small><b><span class="was">~$2,800</span> → <span class="now">$23,000</span>/yr</b></div>
+        <div class="bill"><small>Solo user reports</small><b><span class="was">$80</span> → <span class="now">$1,900</span>/mo</b></div>
+      </div>
+      <p class="src">After Bending Spoons acquired Harvest, flat per-seat pricing became per-seat <i>plus unpublished usage fees</i>. Nobody knows their bill until the invoice lands.</p>
+    </div>
+  </div>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <p class="label">Why we're different</p>
+    <h2>You shouldn't need a spreadsheet to know what your tools cost.</h2>
+    <p class="lede">Every Harvest refugee asks the same question now: "When does this one turn on me?" Here is our answer, in writing.</p>
+    <div class="promises">
+      <div class="promise">
+        <span class="num">01</span>
+        <h3>Flat price, math you can do</h3>
+        <p>$19, $49 or $99 a month depending on team size. No usage layers, no per-invoice fees, no "Enterprise" trap door. The number on the pricing page is the number on your invoice.</p>
+      </div>
+      <div class="promise">
+        <span class="num">02</span>
+        <h3>Grandfathered, in writing</h3>
+        <p>If we ever change pricing, your current rate is locked for as long as you stay. No acquisition can reprice you, because we're bootstrapped and plan to stay that way.</p>
+      </div>
+      <div class="promise">
+        <span class="num">03</span>
+        <h3>Your data is never a hostage</h3>
+        <p>Every project, client, timesheet and invoice exports as clean CSV + JSON anytime, free, instantly. Years of history should never be the reason you can't leave.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="background:var(--panel)">
+  <div class="wrap">
+    <p class="label">What's inside</p>
+    <h2>Everything Harvest had. Nothing you didn't ask to pay for.</h2>
+    <p class="lede">The workflow your team already knows — timers, timesheets, clients, invoices — with predictability built in.</p>
+    <div class="features">
+      <div class="feat"><div class="ic">⏱️</div><h3>Timers &amp; timesheets</h3><p>Start/stop timers, weekly grids, reminders for missing entries. Works offline.</p></div>
+      <div class="feat"><div class="ic">📁</div><h3>Unlimited everything</h3><p>Clients, projects, tasks, invoices — never counted, never surcharged.</p></div>
+      <div class="feat"><div class="ic">🧾</div><h3>Invoicing from hours</h3><p>Turn approved timesheets into branded invoices. Track paid / overdue at a glance.</p></div>
+      <div class="feat"><div class="ic">📥</div><h3>One-click Harvest import</h3><p>Clients, projects, task history and timesheets come over intact. White-glove help included.</p></div>
+      <div class="feat"><div class="ic">📊</div><h3>Budgets &amp; burn</h3><p>See hours vs budget per project before it becomes an awkward client call.</p></div>
+      <div class="feat"><div class="ic">📤</div><h3>Free exports, always</h3><p>Full CSV + JSON export of your entire account, any time, self-serve.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <p class="label" style="text-align:center">Pricing</p>
+    <h2 style="text-align:center">Three numbers. That's the whole pricing page.</h2>
+    <p class="lede" style="text-align:center;margin:16px auto 48px">No usage fees. No add-on tax. No seats hidden behind "contact sales."</p>
+    <div class="plans">
+      <div class="plan">
+        <h3>Starter</h3>
+        <div class="price">$19<small>/mo</small></div>
+        <ul>
+          <li>Up to 3 seats</li>
+          <li>Unlimited projects &amp; clients</li>
+          <li>Invoicing + budgets</li>
+          <li>Free exports</li>
+        </ul>
+        <a class="btn" href="#waitlist">Join waitlist</a>
+      </div>
+      <div class="plan hot">
+        <span class="tag">Most popular</span>
+        <h3>Team</h3>
+        <div class="price">$49<small>/mo</small></div>
+        <ul>
+          <li>Up to 10 seats</li>
+          <li>Everything in Starter</li>
+          <li>Timesheet approvals</li>
+          <li>Free Harvest migration</li>
+        </ul>
+        <a class="btn" href="#waitlist">Join waitlist</a>
+      </div>
+      <div class="plan">
+        <h3>Agency</h3>
+        <div class="price">$99<small>/mo</small></div>
+        <ul>
+          <li>Unlimited seats</li>
+          <li>Everything in Team</li>
+          <li>Profitability reporting</li>
+          <li>Priority support</li>
+        </ul>
+        <a class="btn" href="#waitlist">Join waitlist</a>
+      </div>
+    </div>
+    <p class="grand">Existing customers are grandfathered at their rate forever if pricing ever changes. In writing, in the contract.</p>
+  </div>
+</section>
+
+<section id="switch" style="background:var(--panel)">
+  <div class="wrap">
+    <p class="label">Switching from Harvest</p>
+    <h2>Gone before your next renewal notice.</h2>
+    <p class="lede">Your legacy rate holds until your annual contract renews — that's your window. Most teams move in an afternoon.</p>
+    <div class="steps">
+      <div class="step"><h3>Export from Harvest</h3><p>Or just connect your account — we pull clients, projects, tasks and timesheet history directly.</p></div>
+      <div class="step"><h3>We rebuild your workspace</h3><p>Same structure, same clients, years of history intact. Reviewed by a human before handover.</p></div>
+      <div class="step"><h3>Cancel with confidence</h3><p>Your full archive stays exportable from HourKeep forever. You're never locked in again.</p></div>
+    </div>
+    <form class="mid" action="https://formsubmit.co/deepanshu.masum@gmail.com" method="POST">
+      <input type="email" name="email" placeholder="you@yourstudio.com" required>
+      <button type="submit">Get early access</button>
+    </form>
+    <p class="microcopy" style="text-align:center;margin-top:12px;font-size:.85rem;color:var(--dim)">Launching first to teams migrating from Harvest.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 HourKeep — flat-fee time tracking &amp; invoicing.</span>
+    <span><a href="#">hello@hourkeep.app</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
