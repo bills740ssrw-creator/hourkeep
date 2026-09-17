@@ -3,8 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HourKeep — Time tracking that can't 15× your bill</title>
-<meta name="description" content="Flat-fee time tracking & invoicing for consultancies and agencies fleeing the Harvest price shock. $19–99/mo flat, unlimited projects, one-click Harvest import, free exports forever.">
+<title>HourKeep — Simple Billable Time Tracking for Freelancers</title>
+<meta name="description" content="HourKeep is a simple, privacy-friendly billable-hours tracker for freelancers and small agencies. Record time, organize client work, and create accurate reports — free to start.">
+<link rel="canonical" href="https://bills740ssrw-creator.github.io/hourkeep/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="HourKeep">
+<meta property="og:title" content="HourKeep — Simple Billable Time Tracking for Freelancers">
+<meta property="og:description" content="Track every billable hour without the complexity. Privacy-friendly time tracking for freelancers and small agencies.">
+<meta property="og:url" content="https://bills740ssrw-creator.github.io/hourkeep/">
+<meta property="og:image" content="https://images.unsplash.com/photo-1497366216548-37526070297c?q=70&w=1200&auto=format&fit=crop">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="HourKeep — Simple Billable Time Tracking for Freelancers">
+<meta name="twitter:description" content="Track every billable hour without the complexity. Privacy-friendly time tracking for freelancers and small agencies.">
+<meta name="twitter:image" content="https://images.unsplash.com/photo-1497366216548-37526070297c?q=70&w=1200&auto=format&fit=crop">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317211C'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='36' fill='%23F3EAD3' text-anchor='middle'%3EH%3C/text%3E%3Crect x='14' y='50' width='36' height='3' fill='%23B08A2E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://images.unsplash.com">
@@ -14,16 +26,16 @@
 </head>
 <body>
 
-<nav>
+<nav aria-label="Main navigation">
   <div class="wrap">
     <a class="logo" href="./">Hour<em>Keep</em></a>
     <div class="nav-links">
-      <a href="#why">Why</a>
-      <a href="#features">Features</a>
+      <a href="#who">Who it's for</a>
+      <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a href="#switch">Switch</a>
+      <a href="#faq">FAQ</a>
       <a href="blog/">Blog</a>
-      <a class="nav-cta" href="#waitlist">Join waitlist</a>
+      <a class="nav-cta" href="app.html" data-event="cta_nav_start">Start tracking for free</a>
     </div>
   </div>
 </nav>
@@ -32,163 +44,178 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <span class="kicker rise in">For consultancies &amp; agencies · 2–50 people</span>
-        <h1 class="rise in d1">Time tracking that <span class="it">can't 15×</span> your bill.<span class="gold-rule"></span></h1>
-        <p class="sub rise in d2">Harvest bills jumped <strong>16× overnight</strong> after the buyout. HourKeep is <strong>flat-fee forever</strong> — unlimited everything, one-click import.</p>
-        <form class="signup rise in d3" action="https://formsubmit.co/deepanshu.masum@gmail.com" method="POST">
-          <label class="visually-hidden" for="hero-email">Work email</label>
-          <input id="hero-email" type="email" name="email" placeholder="you@yourstudio.com" required autocomplete="email">
-          <input type="hidden" name="_subject" value="HourKeep waitlist signup">
-          <button type="submit">Get early access</button>
-        </form>
+        <span class="kicker rise in">For freelancers &amp; small agencies worldwide</span>
+        <h1 class="rise in d1">Track every billable hour <span class="it">without the complexity.</span><span class="gold-rule"></span></h1>
+        <p class="sub rise in d2">HourKeep helps freelancers and small agencies track client work, organize projects, and create accurate reports — <strong>without employee surveillance.</strong></p>
+        <div class="cta-row rise in d3">
+          <a class="btn solid" href="app.html" data-event="cta_hero_start">Start tracking for free</a>
+          <a class="btn ghost" href="#how" data-event="cta_hero_how">See how it works</a>
+        </div>
         <div class="hero-proof rise in d3">
-          <span><b>$19–99</b>/mo flat, no usage fees</span>
-          <span><a href="https://www.bbc.com/news/articles/clyq011414eo" target="_blank" rel="noopener">BBC: Harvest bills up 16×</a></span>
+          <span><b>Free</b> to start · no card required</span>
+          <span>Your data stays <b>in your browser</b></span>
         </div>
       </div>
-      <div class="hero-art rise in d2" aria-label="Consultancy studio">
+      <div class="hero-art rise in d2" aria-label="Freelancer workspace">
         <div class="hero-frame">
-          <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=70&w=1200&auto=format&fit=crop" alt="Calm consultancy studio interior" width="1200" height="1380" fetchpriority="high" decoding="async">
+          <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=70&w=1200&auto=format&fit=crop" alt="Calm independent studio workspace" width="1200" height="1380" fetchpriority="high" decoding="async">
         </div>
-        <div class="flat-seal"><span>Flat-fee</span><b>forever</b></div>
-        <div class="invoice-card">
-          <small>April invoice</small>
-          <div class="amt">$49.00</div>
-          <span class="stamp">✓ Flat — no surprises</span>
+        <div class="flat-seal"><span>No surveillance</span><b>ever</b></div>
+        <div class="invoice-card" role="status" aria-label="Example timer display">
+          <small>Today · Brand redesign</small>
+          <div class="amt">02:14:36</div>
+          <span class="stamp">✓ Billable · USD 185/hr</span>
         </div>
       </div>
-    </div>
-
-    <div class="ledger rise">
-      <p class="t">What Harvest customers actually received in 2026</p>
-      <div class="bills">
-        <div class="bill"><small><a href="https://www.bbc.com/news/articles/clyq011414eo" target="_blank" rel="noopener">UK consultancy (BBC News)</a></small><b><span class="was">$130</span> → <span class="now">$2,110</span>/mo</b></div>
-        <div class="bill"><small>US customer (<a href="https://www.bbc.com/news/articles/clyq011414eo" target="_blank" rel="noopener">BBC News</a>)</small><b><span class="was">$2,800</span> → <span class="now">$23,000</span>/yr</b></div>
-        <div class="bill"><small>Solo user, Unlimited-plan quote</small><b><span class="was">$12</span> → <span class="now">$1,900</span>/mo</b></div>
-      </div>
-      <p class="src">After Bending Spoons acquired Harvest, flat per-seat pricing became per-seat <i>plus unpublished usage fees</i>. Nobody knows their bill until the invoice lands.</p>
     </div>
   </div>
 </header>
 
-<section id="why">
+<section id="who">
   <div class="wrap">
-    <p class="label rise">Why we're different</p>
-    <h2 class="rise">You shouldn't need a spreadsheet to know what your tools cost.</h2>
-    <p class="lede rise">Every Harvest refugee asks the same question now: "When does this one turn on me?" Here is our answer, in writing.</p>
+    <p class="label rise">Who it's for</p>
+    <h2 class="rise">Built for people who bill by the hour.</h2>
+    <p class="lede rise">Enterprise timesheets were designed for HR departments. HourKeep is designed for the person doing the work.</p>
     <div class="promises">
       <div class="promise rise">
-        <span class="num">— 01</span>
-        <h3>Flat price, math you can do</h3>
-        <p>$19, $49 or $99 a month depending on team size. No usage layers, no per-invoice fees, no "Enterprise" trap door. The number on the pricing page is the number on your invoice.</p>
+        <span class="num">— i</span>
+        <h3>Freelancers</h3>
+        <p>Designers, developers, writers and independents who need clean records of every billable hour — without learning enterprise software.</p>
       </div>
       <div class="promise rise">
-        <span class="num">— 02</span>
-        <h3>Grandfathered, in writing</h3>
-        <p>If we ever change pricing, your current rate is locked for as long as you stay. No acquisition can reprice you, because we're bootstrapped and plan to stay that way.</p>
+        <span class="num">— ii</span>
+        <h3>Consultants</h3>
+        <p>Client work across time zones, multiple rates, and reports a client can read at a glance. Accurate records, zero admin overhead.</p>
       </div>
       <div class="promise rise">
-        <span class="num">— 03</span>
-        <h3>Your data is never a hostage</h3>
-        <p>Every project, client, timesheet and invoice exports as clean CSV + JSON anytime, free, instantly. Years of history should never be the reason you can't leave.</p>
+        <span class="num">— iii</span>
+        <h3>Small agencies</h3>
+        <p>Teams of 2–50 tracking project hours, separating billable from non-billable, and exporting totals per client or project.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section id="features" class="tint">
+<section id="benefits" class="tint">
   <div class="wrap">
-    <h2 class="rise">Everything Harvest had. Nothing you didn't ask to pay for.</h2>
-    <p class="lede rise">The workflow your team already knows — timers, timesheets, clients, invoices — with predictability built in.</p>
-    <div class="feat-split">
-      <figure class="feat-figure rise">
-        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=70&w=1000&auto=format&fit=crop" alt="Agency team reviewing work together" width="1000" height="1100" loading="lazy" decoding="async">
-        <figcaption>Built for teams of 2–50 · timers, approvals, invoicing in one place</figcaption>
-      </figure>
-      <ul class="feat-list rise">
-        <li><span class="n">i.</span><h3>Timers &amp; timesheets</h3><p>Start/stop timers, weekly grids, reminders for missing entries. Works offline.</p></li>
-        <li><span class="n">ii.</span><h3>Unlimited everything</h3><p>Clients, projects, tasks, invoices — never counted, never surcharged.</p></li>
-        <li><span class="n">iii.</span><h3>Invoicing from hours</h3><p>Turn approved timesheets into branded invoices. Track paid / overdue at a glance.</p></li>
-        <li><span class="n">iv.</span><h3>One-click Harvest import</h3><p>Clients, projects, task history and timesheets come over intact. White-glove help included.</p></li>
-        <li><span class="n">v.</span><h3>Budgets &amp; burn</h3><p>See hours vs budget per project before it becomes an awkward client call.</p></li>
-        <li><span class="n">vi.</span><h3>Free exports, always</h3><p>Full CSV + JSON export of your entire account, any time, self-serve.</p></li>
-      </ul>
+    <h2 class="rise">Everything you need. Nothing watching you.</h2>
+    <p class="lede rise">Fast to start, honest about what it does, and respectful of the person using it.</p>
+    <ul class="feat-list rise">
+      <li><span class="n">i.</span><h3>Fast time tracking</h3><p>One-tap timer or a manual entry in seconds. No setup wizard standing between you and your first hour.</p></li>
+      <li><span class="n">ii.</span><h3>Accurate billable records</h3><p>Billable and non-billable entries, hourly rates, and amounts calculated to the cent.</p></li>
+      <li><span class="n">iii.</span><h3>Client-ready reports</h3><p>Daily, weekly and monthly totals grouped by client, project or task — ready to send.</p></li>
+      <li><span class="n">iv.</span><h3>Multiple currencies</h3><p>Bill in USD, EUR, GBP, CAD, AUD, NZD and more. Change currency anytime in settings.</p></li>
+      <li><span class="n">v.</span><h3>Time-zone support</h3><p>Hours are stored in UTC and shown in your time zone — travel or relocate without breaking records.</p></li>
+      <li><span class="n">vi.</span><h3>Privacy-friendly by design</h3><p>No screenshots, no keystroke logging, no hidden monitoring. Your data lives in your browser.</p></li>
+      <li><span class="n">vii.</span><h3>Easy export</h3><p>CSV reports plus a full JSON backup of everything. Delete it all anytime with two taps.</p></li>
+      <li><span class="n">viii.</span><h3>Mobile-friendly</h3><p>Big start/stop button, thumb-sized targets, and layouts that work on phones, tablets and desktops.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="switch-grid">
+      <div>
+        <p class="label rise">How it works</p>
+        <h2 class="rise">Four steps to a clean timesheet.</h2>
+        <p class="lede rise" style="margin-bottom:0">No onboarding call. No 40-minute setup video. Just this:</p>
+        <ol class="steps rise">
+          <li class="step"><h3>Create a client or project</h3><p>Name a client, add a project with an hourly rate. Takes about thirty seconds.</p></li>
+          <li class="step"><h3>Start a timer or add time manually</h3><p>Tap start when work begins, stop when it ends — or log hours after the fact with date and duration.</p></li>
+          <li class="step"><h3>Review your hours</h3><p>Check daily, weekly and monthly totals, split by billable and non-billable, per client or project.</p></li>
+          <li class="step"><h3>Export or share a report</h3><p>Download a CSV for your records or to attach to an invoice. Done.</p></li>
+        </ol>
+        <p class="rise" style="margin-top:28px"><a class="btn solid btn-inline" href="app.html" data-event="cta_how_start">Start tracking for free</a></p>
+      </div>
+      <div class="switch-figure rise">
+        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=70&w=1000&auto=format&fit=crop" alt="Small agency team reviewing client work" width="1000" height="1175" loading="lazy" decoding="async">
+      </div>
     </div>
+  </div>
+</section>
+
+<section id="privacy" class="tint">
+  <div class="wrap">
+    <p class="label rise">Privacy</p>
+    <h2 class="rise">A time tracker should track time. Nothing else.</h2>
+    <p class="lede rise">HourKeep is a personal productivity tool, not employee surveillance software. Specifically:</p>
+    <div class="promises">
+      <div class="promise rise">
+        <span class="num">— i</span>
+        <h3>No screenshots</h3>
+        <p>HourKeep never captures your screen. There is no screenshot feature to enable, disable or misconfigure.</p>
+      </div>
+      <div class="promise rise">
+        <span class="num">— ii</span>
+        <h3>No keystroke logging</h3>
+        <p>What you type outside HourKeep is none of its business. It records only the time entries you create.</p>
+      </div>
+      <div class="promise rise">
+        <span class="num">— iii</span>
+        <h3>No hidden monitoring</h3>
+        <p>No GPS tracking, no activity scores, no background surveillance. If a timer is running, you started it and you can see it.</p>
+      </div>
+    </div>
+    <p class="rise" style="margin-top:28px;color:var(--muted);max-width:42rem">Your entries are stored locally in your own browser — nothing is uploaded anywhere. Export or permanently delete everything anytime from Settings. Read the full <a href="privacy.html">Privacy Policy</a>.</p>
   </div>
 </section>
 
 <section id="pricing">
   <div class="wrap pricing-head">
-    <h2 class="rise">Three numbers. That's the whole pricing page.</h2>
-    <p class="lede rise">No usage fees. No add-on tax. No seats hidden behind "contact sales."</p>
+    <p class="label rise" style="justify-content:center">Pricing</p>
+    <h2 class="rise">Simple plans. Coming soon.</h2>
+    <p class="lede rise">The tracker is free to use right now. Paid plans are on the way — join the waitlist and we'll email you once, at launch.</p>
     <div class="plans">
       <div class="plan rise">
-        <h3>Starter</h3>
-        <div class="price">$19<small>/mo</small></div>
+        <h3>Free</h3>
+        <div class="price">$0<small> · available now</small></div>
         <ul>
-          <li>Up to 3 seats</li>
-          <li>Unlimited projects &amp; clients</li>
-          <li>Invoicing + budgets</li>
-          <li>Free exports</li>
+          <li>Unlimited clients &amp; projects</li>
+          <li>Timer + manual entries</li>
+          <li>Reports &amp; CSV export</li>
+          <li>Data stays in your browser</li>
         </ul>
-        <a class="btn ghost" href="#waitlist">Join waitlist</a>
+        <a class="btn" href="app.html" data-event="cta_pricing_free">Start tracking for free</a>
       </div>
       <div class="plan hot rise">
-        <span class="tag">Most popular</span>
-        <h3>Team</h3>
-        <div class="price">$49<small>/mo</small></div>
+        <span class="tag">Coming soon</span>
+        <h3>Pro</h3>
+        <div class="price">TBD<small> /mo</small></div>
         <ul>
-          <li>Up to 10 seats</li>
-          <li>Everything in Starter</li>
-          <li>Timesheet approvals</li>
-          <li>Free Harvest migration</li>
-        </ul>
-        <a class="btn" href="#waitlist">Join waitlist</a>
-      </div>
-      <div class="plan rise">
-        <h3>Agency</h3>
-        <div class="price">$99<small>/mo</small></div>
-        <ul>
-          <li>Unlimited seats</li>
-          <li>Everything in Team</li>
-          <li>Profitability reporting</li>
+          <li>Everything in Free</li>
+          <li>Cloud sync across devices</li>
+          <li>Branded client reports</li>
           <li>Priority support</li>
         </ul>
-        <a class="btn ghost" href="#waitlist">Join waitlist</a>
+        <a class="btn ghost" href="#waitlist" data-event="cta_pricing_pro">Join waitlist</a>
+      </div>
+      <div class="plan rise">
+        <span class="tag">Coming soon</span>
+        <h3>Team</h3>
+        <div class="price">TBD<small> /mo</small></div>
+        <ul>
+          <li>Everything in Pro</li>
+          <li>Shared workspaces</li>
+          <li>Timesheet approvals</li>
+          <li>Profitability reporting</li>
+        </ul>
+        <a class="btn ghost" href="#waitlist" data-event="cta_pricing_team">Join waitlist</a>
       </div>
     </div>
-    <p class="grand"><span>◆</span> Existing customers are grandfathered at their rate forever if pricing ever changes. In writing, in the contract.</p>
-  </div>
-</section>
-
-<section id="switch" class="tint">
-  <div class="wrap">
-    <div class="switch-grid">
-      <div>
-        <h2 class="rise">Gone before your next renewal notice.</h2>
-        <p class="lede rise" style="margin-bottom:0">Your legacy rate holds until your annual contract renews — that's your window. Most teams move in an afternoon.</p>
-        <ol class="steps rise">
-          <li class="step"><h3>Export from Harvest</h3><p>Or just connect your account — we pull clients, projects, tasks and timesheet history directly.</p></li>
-          <li class="step"><h3>We rebuild your workspace</h3><p>Same structure, same clients, years of history intact. Reviewed by a human before handover.</p></li>
-          <li class="step"><h3>Cancel with confidence</h3><p>Your full archive stays exportable from HourKeep forever. You're never locked in again.</p></li>
-        </ol>
-      </div>
-      <div class="switch-figure rise">
-        <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=70&w=1000&auto=format&fit=crop" alt="Migration plan laid out on a desk" width="1000" height="1175" loading="lazy" decoding="async">
-      </div>
-    </div>
+    <p class="grand"><span>◆</span> No checkout, no card, no trial that silently converts — paid plans don't exist yet, so there's nothing to buy.</p>
 
     <div class="band rise" id="waitlist">
       <div>
-        <h2>Get early access.</h2>
-        <p>Launching first to teams migrating from Harvest. Free white-glove migration · No credit card · Cancel anytime.</p>
+        <h2>Get notified at launch.</h2>
+        <p>One email when paid plans go live. Free white-glove help moving off your current tool.</p>
       </div>
       <div>
         <form action="https://formsubmit.co/deepanshu.masum@gmail.com" method="POST">
           <label class="visually-hidden" for="band-email">Work email</label>
           <input id="band-email" type="email" name="email" placeholder="you@yourstudio.com" required autocomplete="email">
-          <input type="hidden" name="_subject" value="HourKeep waitlist signup">
-          <button type="submit">Join waitlist</button>
+          <input type="hidden" name="_subject" value="HourKeep launch waitlist">
+          <button type="submit" data-event="waitlist_submit">Notify me</button>
         </form>
         <p class="microcopy">One email at launch. Nothing else, ever.</p>
       </div>
@@ -196,25 +223,94 @@
   </div>
 </section>
 
-<footer>
+<section id="faq">
   <div class="wrap">
+    <p class="label rise">FAQ</p>
+    <h2 class="rise">Questions, answered plainly.</h2>
+    <div class="faq rise">
+      <details>
+        <summary>Who is HourKeep for?</summary>
+        <p>Freelancers, consultants, small agencies and independent professionals who bill clients by the hour and want simple records without enterprise software.</p>
+      </details>
+      <details>
+        <summary>Is there a free plan?</summary>
+        <p>Yes. The time tracker is free to use right now — unlimited clients, projects, entries and exports. Paid Pro and Team plans with cloud sync are coming soon.</p>
+      </details>
+      <details>
+        <summary>Can I track billable and non-billable time?</summary>
+        <p>Yes. Every entry can be marked billable or non-billable, and reports show the split side by side.</p>
+      </details>
+      <details>
+        <summary>Can I use different currencies?</summary>
+        <p>Yes. Amounts default to USD and you can switch to EUR, GBP, CAD, AUD, NZD and other currencies in Settings. Formatting follows your locale.</p>
+      </details>
+      <details>
+        <summary>Can I export my data?</summary>
+        <p>Yes. Export reports as CSV, download a full JSON backup of everything, or permanently delete all your data from Settings at any time.</p>
+      </details>
+      <details>
+        <summary>Does HourKeep monitor employees?</summary>
+        <p>No. There are no screenshots, no keystroke logging, no GPS tracking and no hidden monitoring of any kind. It's a personal time tracker — a timer only runs when you start it.</p>
+      </details>
+      <details>
+        <summary>Does it work on mobile?</summary>
+        <p>Yes. The tracker is a responsive web app that works on phones, tablets and desktops, with a prominent start/stop button and touch-friendly forms.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-grid">
     <div>
       <div class="rule"></div>
-      <span>© 2026 HourKeep — flat-fee time tracking &amp; invoicing. <a href="blog/">Blog</a></span>
+      <a class="logo" href="./" style="font-size:1.15rem">Hour<em>Keep</em></a>
+      <p style="margin-top:10px;max-width:22rem">Simple, privacy-friendly billable time tracking for freelancers and small agencies.</p>
     </div>
-    <span><a href="#">hello@hourkeep.app</a></span>
+    <nav aria-label="Product">
+      <p class="fhead">Product</p>
+      <a href="app.html">Open the tracker</a>
+      <a href="#pricing">Pricing</a>
+      <a href="blog/">Blog</a>
+    </nav>
+    <nav aria-label="Support">
+      <p class="fhead">Support</p>
+      <a href="mailto:hello@hourkeep.app">Contact us</a>
+      <a href="#faq">FAQ</a>
+      <a href="app.html#settings">Your data &amp; settings</a>
+    </nav>
+    <nav aria-label="Legal">
+      <p class="fhead">Legal</p>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+    </nav>
+  </div>
+  <div class="wrap footer-base">
+    <span>© 2026 HourKeep.</span>
+    <span><a href="mailto:hello@hourkeep.app">hello@hourkeep.app</a></span>
   </div>
 </footer>
 
 <script>
 (function(){
-  // Scroll reveal — IntersectionObserver only (no scroll listeners), transform/opacity only.
+  // Scroll reveal — IntersectionObserver only, transform/opacity only.
   var els = document.querySelectorAll('.rise:not(header .rise)');
   if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return;}
   var io = new IntersectionObserver(function(entries){
     entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
   },{threshold:.12,rootMargin:'0px 0px -6% 0px'});
   els.forEach(function(e){io.observe(e)});
+
+  // Analytics-ready event interface: queue only, no provider configured.
+  // When an analytics tool is added, drain window.hkQueue there. See ANALYTICS.md.
+  window.hkQueue = window.hkQueue || [];
+  window.hkTrack = function(name, props){
+    window.hkQueue.push({event:name, props:props||{}, at:new Date().toISOString()});
+  };
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-event]');
+    if(t){ window.hkTrack(t.getAttribute('data-event'), {href:t.getAttribute('href')}); }
+  });
 })();
 </script>
 

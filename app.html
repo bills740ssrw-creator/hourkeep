@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HourKeep Tracker — Simple Billable Time Tracking</title>
+<meta name="description" content="Free billable time tracker for freelancers and small agencies. Timers, manual entries, reports and CSV export. Your data stays in your browser.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317211C'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='36' fill='%23F3EAD3' text-anchor='middle'%3EH%3C/text%3E%3Crect x='14' y='50' width='36' height='3' fill='%23B08A2E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav aria-label="Main navigation">
+  <div class="wrap">
+    <a class="logo" href="./">Hour<em>Keep</em></a>
+    <div class="nav-links">
+      <a href="./">Home</a>
+      <a href="blog/">Blog</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap app-main">
+  <div class="app-head">
+    <div>
+      <h1>Your time tracker</h1>
+      <p class="muted">Free while in early access. Everything below is stored only in this browser.</p>
+    </div>
+  </div>
+  <div id="app" aria-live="off"></div>
+</main>
+
+<div id="toasts" aria-live="polite"></div>
+<div id="sr-live" class="visually-hidden" role="status" aria-live="polite"></div>
+
+<footer>
+  <div class="wrap footer-base">
+    <span>© 2026 HourKeep. <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a></span>
+    <span><a href="mailto:hello@hourkeep.app">hello@hourkeep.app</a></span>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+
+</body>
+</html>

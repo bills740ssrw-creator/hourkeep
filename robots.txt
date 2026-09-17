@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bills740ssrw-creator.github.io/hourkeep/sitemap.xml
