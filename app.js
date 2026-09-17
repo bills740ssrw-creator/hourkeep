@@ -173,8 +173,25 @@ function sanitizeState(raw) {
   return s;
 }
 
-/** Escape user text before injecting into HTML. */
-function escapeHtml(s) {
+var APP_VIEWS = ['tracker', 'library', 'reports', 'settings'];
+
+/**
+ * Hash routing for GitHub Pages (no server rewrites available).
+ * '#/tracker' etc. map to views; unknown '#/…' maps to 'notfound';
+ * anything else returns null (no route given). Legacy '#settings' kept working.
+ */
+function parseAppHash(hash) {
+  var h = String(hash || '');
+  if (h === '' || h === '#') return null;
+  if (h === '#settings') return { view: 'settings' };
+  var m = /^#\/([a-z]+)/.exec(h);
+  if (!m) return null;
+  if (APP_VIEWS.indexOf(m[1]) >= 0) return { view: m[1] };
+  return { view: 'notfound' };
+}
+function hashForView(view) { return '#/' + view; }
+
+/** Escape user text before injecting into HTML. */function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
@@ -183,7 +200,8 @@ function escapeHtml(s) {
 var Pure = { uid: uid, timerElapsedMs: timerElapsedMs, formatElapsed: formatElapsed, entryDurationMs: entryDurationMs,
   msToHours: msToHours, calcCents: calcCents, formatMoney: formatMoney, tzDateKey: tzDateKey,
   weekStartKey: weekStartKey, monthKey: monthKey, validateEntry: validateEntry, combineDateTime: combineDateTime,
-  summarize: summarize, entriesToCSV: entriesToCSV, sanitizeState: sanitizeState, escapeHtml: escapeHtml };
+  summarize: summarize, entriesToCSV: entriesToCSV, sanitizeState: sanitizeState, escapeHtml: escapeHtml,
+  APP_VIEWS: APP_VIEWS, parseAppHash: parseAppHash, hashForView: hashForView };
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = Pure; }
 
@@ -542,7 +560,24 @@ function renderOnboarding() {
   return '<div class="ob-overlay"><div class="ob-card" role="dialog" aria-modal="true" aria-label="Getting started">' + inner + '</div></div>';
 }
 
+function renderNotFound() {
+  return '<section class="card"><h2>Section not found</h2>' +
+    '<div class="empty"><p><strong>That section doesn\'t exist.</strong></p>' +
+    '<p class="muted">The link may be mistyped — your tracker is one click away, nothing was lost.</p></div>' +
+    '<div class="row-btns"><button class="btn solid btn-inline" data-view="tracker">Back to tracker</button></div></section>';
+}
+
+/** Navigate by hash so Back/Forward/refresh keep working. Same-hash clicks render directly. */
+function setRoute(view) {
+  try {
+    if (window.location.hash === hashForView(view)) render();
+    else window.location.hash = hashForView(view);
+  } catch (e) { ui.view = view; render(); }
+}
+var hashBound = false;
+
 function render() {
+  try { var r0 = parseAppHash(window.location.hash); if (r0) ui.view = r0.view; } catch (e) {}
   var app = document.getElementById('app');
   var html = renderOnboarding();
   html += '<div class="tabs" role="tablist" aria-label="Tracker sections">' +
@@ -552,12 +587,21 @@ function render() {
   if (ui.view === 'tracker') html += renderTracker();
   else if (ui.view === 'library') html += renderLibrary();
   else if (ui.view === 'reports') html += renderReports();
+  else if (ui.view === 'notfound') html += renderNotFound();
   else html += renderSettings();
   app.innerHTML = html;
   bind();
   clearInterval(ui.tickTimer);
   if (state.activeTimer) ui.tickTimer = setInterval(tick, 1000);
-  if (window.location.hash === '#settings' && ui.view !== 'settings') { ui.view = 'settings'; render(); }
+  if (!hashBound) {
+    hashBound = true;
+    window.addEventListener('hashchange', function () {
+      try {
+        var r = parseAppHash(window.location.hash);
+        if (r && r.view !== ui.view) { ui.view = r.view; render(); }
+      } catch (e) {}
+    });
+  }
 }
 
 /* ---------- events (delegated) ---------- */
@@ -565,7 +609,10 @@ function val(id) { var el = document.getElementById(id); return el ? el.value : 
 
 function bind() {
   document.querySelectorAll('[data-view]').forEach(function (b) {
-    b.onclick = function () { ui.view = b.getAttribute('data-view'); render(); };
+    b.onclick = function () { setRoute(b.getAttribute('data-view')); };
+  });
+  document.querySelectorAll('[data-go]').forEach(function (b) {
+    b.onclick = function () { setRoute(b.getAttribute('data-go')); };
   });
   document.querySelectorAll('[data-role]').forEach(function (b) {
     b.onclick = function () { state.role = b.getAttribute('data-role'); saveState(state); window.hkTrack('onboarding_role', { role: state.role }); render(); };

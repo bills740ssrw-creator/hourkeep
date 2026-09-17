@@ -141,3 +141,23 @@ test('summarize of empty list is zeroed', () => {
   const t = hk.summarize([], {});
   assert.deepEqual([t.totalMs, t.billMs, t.nonBillMs, t.billCents], [0, 0, 0, 0]);
 });
+
+// 14. Hash routing: known views parse, unknown hashes 404, legacy kept.
+test('parseAppHash routes hash URLs to views', () => {
+  assert.deepEqual(hk.parseAppHash('#/tracker'), { view: 'tracker' });
+  assert.deepEqual(hk.parseAppHash('#/library'), { view: 'library' });
+  assert.deepEqual(hk.parseAppHash('#/reports'), { view: 'reports' });
+  assert.deepEqual(hk.parseAppHash('#/settings'), { view: 'settings' });
+  assert.deepEqual(hk.parseAppHash('#/nope'), { view: 'notfound' });
+  assert.deepEqual(hk.parseAppHash('#settings'), { view: 'settings' }); // legacy link
+  assert.equal(hk.parseAppHash(''), null);
+  assert.equal(hk.parseAppHash('#'), null);
+  assert.equal(hk.parseAppHash('#why'), null); // landing anchors are not app routes
+});
+
+test('hashForView round-trips through parseAppHash', () => {
+  for (const v of hk.APP_VIEWS) {
+    assert.deepEqual(hk.parseAppHash(hk.hashForView(v)), { view: v });
+  }
+  assert.ok(hk.hashForView('reports').startsWith('#/')); // no /hourkeep prefix hardcoded
+});
