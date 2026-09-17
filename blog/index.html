@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HourKeep Blog — Notes on fair pricing & leaving Harvest</title>
+<meta name="description" content="Practical guides for consultancies navigating the Harvest price shock: what changed, how to migrate in an afternoon, and how to read SaaS pricing before it surprises you.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="../">Hour<em>Keep</em></a>
+    <div class="nav-links">
+      <a href="../#why">Why</a>
+      <a href="../#features">Features</a>
+      <a href="../#pricing">Pricing</a>
+      <a href="../#switch">Switch</a>
+      <a href="./">Blog</a>
+      <a class="nav-cta" href="../#waitlist">Join waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<header class="blog-hero">
+  <div class="wrap">
+    <a class="back-link rise in" href="../">← Back to HourKeep</a>
+    <h1 class="rise in d1">Notes on fair pricing<span class="it">,</span> <span class="it">clean exits</span> &amp; life after Harvest.<span class="gold-rule"></span></h1>
+    <p class="sub rise in d2">Short, practical reads for consultancies and agencies. No growth hacks, no filler — just what we'd want to know before our renewal notice lands.</p>
+    <div class="blog-grid">
+      <a class="post-card rise" href="harvest-price-shock/">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=70&w=800&auto=format&fit=crop" alt="Invoice and calculator on a desk" width="800" height="450" loading="lazy" decoding="async"></div>
+        <div class="pbody">
+          <span class="date">Pricing · 6 min read</span>
+          <h3>Harvest's 16× price shock, explained</h3>
+          <p>What actually changed after the acquisition, the bills customers received, and what to do before your renewal date.</p>
+          <span class="more">Read the breakdown →</span>
+        </div>
+      </a>
+      <a class="post-card rise" href="harvest-migration-checklist/">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=70&w=800&auto=format&fit=crop" alt="Migration plan laid out on a desk" width="800" height="450" loading="lazy" decoding="async"></div>
+        <div class="pbody">
+          <span class="date">Guide · 5 min read</span>
+          <h3>The afternoon Harvest migration checklist</h3>
+          <p>Seven steps to move clients, projects and years of timesheets without losing a billable hour — most teams finish in a day.</p>
+          <span class="more">Get the checklist →</span>
+        </div>
+      </a>
+      <a class="post-card rise" href="flat-fee-vs-usage-pricing/">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=70&w=800&auto=format&fit=crop" alt="Charts and analytics on a laptop" width="800" height="450" loading="lazy" decoding="async"></div>
+        <div class="pbody">
+          <span class="date">Opinion · 4 min read</span>
+          <h3>Flat-fee vs usage pricing: read the bill before it reads you</h3>
+          <p>Five questions that reveal whether your next tool can surprise you — and the contract lines that actually protect you.</p>
+          <span class="more">Learn the five questions →</span>
+        </div>
+      </a>
+    </div>
+    <div class="band rise" style="margin:72px 0 96px">
+      <div>
+        <h2>Stop budgeting around surprises.</h2>
+        <p>HourKeep is $19–99/mo flat, forever. Join the waitlist and migrate before your next renewal.</p>
+      </div>
+      <div>
+        <form action="https://formsubmit.co/deepanshu.masum@gmail.com" method="POST">
+          <label class="visually-hidden" for="blog-email">Work email</label>
+          <input id="blog-email" type="email" name="email" placeholder="you@yourstudio.com" required autocomplete="email">
+          <input type="hidden" name="_subject" value="HourKeep waitlist signup (blog)">
+          <button type="submit">Join waitlist</button>
+        </form>
+        <p class="microcopy">One email at launch. Nothing else, ever.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="rule"></div>
+      <span>© 2026 HourKeep — flat-fee time tracking &amp; invoicing. <a href="./">Blog</a></span>
+    </div>
+    <span><a href="#">hello@hourkeep.app</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var els = document.querySelectorAll('.rise:not(header .rise)');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return;}
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+  },{threshold:.12,rootMargin:'0px 0px -6% 0px'});
+  els.forEach(function(e){io.observe(e)});
+})();
+</script>
+
+</body>
+</html>
