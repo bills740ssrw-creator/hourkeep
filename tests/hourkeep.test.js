@@ -161,3 +161,11 @@ test('hashForView round-trips through parseAppHash', () => {
   }
   assert.ok(hk.hashForView('reports').startsWith('#/')); // no /hourkeep prefix hardcoded
 });
+
+test('previewDurationMs previews manual-entry duration, midnight-aware', () => {
+  assert.equal(hk.previewDurationMs('2026-09-17', '09:00', '11:30'), 2.5 * 3600 * 1000);
+  assert.equal(hk.previewDurationMs('2026-09-17', '22:00', '01:00'), 3 * 3600 * 1000); // overnight
+  assert.equal(hk.previewDurationMs('2026-09-17', '09:00', '09:00'), 0); // zero rejected
+  assert.equal(hk.previewDurationMs('2026-09-17', '', '10:00'), 0); // incomplete
+  assert.equal(hk.previewDurationMs('', '', ''), 0);
+});

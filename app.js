@@ -102,6 +102,19 @@ function combineDateTime(dateStr, timeStr) {
   return new Date(dateStr + 'T' + timeStr + ':00').getTime();
 }
 
+/** Live duration preview for the manual-entry form. Returns ms, or 0 when inputs are incomplete/invalid. */
+function previewDurationMs(dateStr, startStr, endStr) {
+  if (!dateStr || !startStr || !endStr) return 0;
+  var s = new Date(dateStr + 'T' + startStr + ':00').getTime();
+  var e = new Date(dateStr + 'T' + endStr + ':00').getTime();
+  if (!isFinite(s) || !isFinite(e)) return 0;
+  if (startStr === endStr) return 0;
+  if (e <= s) e += 24 * 3600 * 1000; // crosses midnight
+  var ms = e - s;
+  if (ms <= 0 || ms > 24 * 3600 * 1000) return 0;
+  return ms;
+}
+
 /** Aggregate entries into totals. projects: {id:{rate,clientId}}, clients:{id:{name}}. */
 function summarize(entries, projects) {
   var t = { totalMs: 0, billMs: 0, nonBillMs: 0, billCents: 0, byClient: {}, byProject: {} };
@@ -163,6 +176,7 @@ function sanitizeState(raw) {
   if (Array.isArray(raw.entries)) s.entries = raw.entries.filter(function (e) { return e && typeof e.id === 'string' && isFinite(e.startMs) && isFinite(e.endMs); });
   if (raw.activeTimer && isFinite(raw.activeTimer.startMs) && typeof raw.activeTimer.projectId === 'string') {
     s.activeTimer = { projectId: raw.activeTimer.projectId, startMs: raw.activeTimer.startMs, description: String(raw.activeTimer.description || '') };
+    if (typeof raw.activeTimer.billable === 'boolean') s.activeTimer.billable = raw.activeTimer.billable;
   }
   if (raw.settings && typeof raw.settings === 'object') {
     if (typeof raw.settings.currency === 'string' && raw.settings.currency) s.settings.currency = raw.settings.currency;
@@ -200,6 +214,7 @@ function hashForView(view) { return '#/' + view; }
 var Pure = { uid: uid, timerElapsedMs: timerElapsedMs, formatElapsed: formatElapsed, entryDurationMs: entryDurationMs,
   msToHours: msToHours, calcCents: calcCents, formatMoney: formatMoney, tzDateKey: tzDateKey,
   weekStartKey: weekStartKey, monthKey: monthKey, validateEntry: validateEntry, combineDateTime: combineDateTime,
+  previewDurationMs: previewDurationMs,
   summarize: summarize, entriesToCSV: entriesToCSV, sanitizeState: sanitizeState, escapeHtml: escapeHtml,
   APP_VIEWS: APP_VIEWS, parseAppHash: parseAppHash, hashForView: hashForView };
 
@@ -225,7 +240,8 @@ function saveState(s) {
 }
 
 var state = loadState();
-var ui = { view: 'tracker', reportRange: 'week', customFrom: null, customTo: null, editingEntryId: null, tickTimer: null };
+var ui = { view: 'tracker', reportRange: 'week', customFrom: null, customTo: null, editingEntryId: null, tickTimer: null,
+  search: '', modal: null, tourStep: 0, wizardClient: '', wizardProject: '', wizardRate: '' };
 
 function effectiveTimeZone() {
   if (state.settings.timeZone && state.settings.timeZone !== 'auto') return state.settings.timeZone;
@@ -254,10 +270,11 @@ function announce(msg) {
 }
 
 /* ---------- timer engine: timestamp-based, survives refresh/sleep ---------- */
-function startTimer(projectId, description) {
+function startTimer(projectId, description, billableOverride) {
   if (state.activeTimer) { toast('A timer is already running. Stop it first.', 'error'); return false; }
   if (!projectById(projectId)) { toast('Choose a project first.', 'error'); return false; }
   state.activeTimer = { projectId: projectId, startMs: Date.now(), description: description || '' };
+  if (typeof billableOverride === 'boolean') state.activeTimer.billable = billableOverride;
   saveState(state);
   window.hkTrack('timer_started', { projectId: projectId });
   render();
@@ -268,8 +285,9 @@ function stopTimer() {
   var t = state.activeTimer;
   var endMs = Date.now();
   var p = projectById(t.projectId);
+  var billable = (typeof t.billable === 'boolean') ? t.billable : (p ? p.billableDefault !== false : true);
   state.entries.push({ id: uid(), projectId: t.projectId, startMs: t.startMs, endMs: endMs,
-    description: t.description || '', billable: p ? p.billableDefault !== false : true, createdAt: endMs });
+    description: t.description || '', billable: billable, createdAt: endMs });
   state.activeTimer = null;
   saveState(state);
   window.hkTrack('timer_stopped', {});
@@ -279,11 +297,21 @@ function stopTimer() {
 }
 function tick() {
   if (!state.activeTimer) return;
+  var ms = timerElapsedMs(state.activeTimer.startMs, Date.now());
   var el = document.getElementById('timer-elapsed');
-  if (el) {
-    var ms = timerElapsedMs(state.activeTimer.startMs, Date.now());
-    el.textContent = formatElapsed(ms);
-  }
+  if (el) el.textContent = formatElapsed(ms);
+  var amt = document.getElementById('timer-amount');
+  if (amt) amt.textContent = liveAmountText(state.activeTimer, ms);
+}
+
+/** Live earnings line for a running timer. Pure computation, no side effects. */
+function liveAmountText(t, ms) {
+  var p = projectById(t.projectId);
+  var billable = (typeof t.billable === 'boolean') ? t.billable : (p ? p.billableDefault !== false : true);
+  if (!p || !billable) return 'Non-billable · time only';
+  var rate = p.rate || 0;
+  if (!(rate > 0)) return 'Billable · no rate set';
+  return '≈ ' + money(calcCents(msToHours(ms), rate)) + ' so far · ' + money(Math.round(rate * 100)) + '/hr';
 }
 window.addEventListener('beforeunload', function (e) {
   if (state.activeTimer) { e.preventDefault(); e.returnValue = ''; }
@@ -356,26 +384,91 @@ function projectOptions(selectedId) {
   }).join('') || '<option value="">No active projects — create one below</option>';
 }
 
+function recentProjectIds(limit) {
+  var seen = {}, out = [];
+  var sorted = state.entries.slice().sort(function (a, b) { return b.startMs - a.startMs; });
+  sorted.forEach(function (en) {
+    if (out.length >= (limit || 3)) return;
+    if (!seen[en.projectId] && projectById(en.projectId) && !projectById(en.projectId).archived) {
+      seen[en.projectId] = true; out.push(en.projectId);
+    }
+  });
+  activeProjects().forEach(function (p) {
+    if (out.length >= (limit || 3)) return;
+    if (!seen[p.id]) { seen[p.id] = true; out.push(p.id); }
+  });
+  return out;
+}
+
+function renderSetupWizard() {
+  return '' +
+  '<section class="card timer-card timer-dark" aria-label="Get set up in 30 seconds">' +
+    '<div class="timer-top"><h2>Get set up in 30 seconds</h2><span class="pill live"><span class="dot"></span>Step 1 of 1</span></div>' +
+    '<p class="timer-sub">HourKeep needs one client and one project before your first timer. Fill this in once — no extra pages.</p>' +
+    '<div class="wizard-steps" aria-label="Setup steps">' +
+      '<div class="wstep"><span class="wnum">1</span><div><b>Name your client</b><small>Who pays the invoice? e.g. Acme Studio</small></div></div>' +
+      '<div class="wstep"><span class="wnum">2</span><div><b>Name the work</b><small>e.g. Website redesign · set an hourly rate</small></div></div>' +
+      '<div class="wstep"><span class="wnum">3</span><div><b>Press Start</b><small>Your timer appears here with live earnings</small></div></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div><label for="wz-client">Client name</label><input id="wz-client" type="text" maxlength="80" placeholder="e.g. Acme Studio" autocomplete="organization"></div>' +
+      '<div><label for="wz-project">Project name</label><input id="wz-project" type="text" maxlength="80" placeholder="e.g. Website redesign"></div>' +
+      '<div><label for="wz-rate">Hourly rate (' + escapeHtml(state.settings.currency) + ')</label><input id="wz-rate" type="number" min="0" step="0.01" placeholder="e.g. 85"></div>' +
+      '<div><label class="check"><input id="wz-billable" type="checkbox" checked> This work is billable</label></div>' +
+    '</div>' +
+    '<button class="btn-start" id="btn-wizard-create">Create &amp; show my timer →</button>' +
+    '<p class="wizard-alt">Just exploring? <button class="linkbtn light" id="btn-wizard-sample">Add labeled sample data</button></p>' +
+  '</section>';
+}
+
 function renderTimerCard() {
   var t = state.activeTimer;
+  if (!t && activeProjects().length === 0) return renderSetupWizard();
   var desc = t ? t.description : '';
   var proj = t ? t.projectId : (activeProjects()[0] ? activeProjects()[0].id : '');
+  var p = t ? projectById(t.projectId) : projectById(proj);
+  var pname = p ? (clientName(p.clientId) + ' · ' + p.name) : 'No project yet';
+  var billDefault = t
+    ? ((typeof t.billable === 'boolean') ? t.billable : (p ? p.billableDefault !== false : true))
+    : (p ? p.billableDefault !== false : true);
+  var recents = recentProjectIds(3).map(function (id) {
+    var rp = projectById(id);
+    if (!rp || id === proj) return '';
+    return '<button class="recent" data-recent="' + id + '">' + escapeHtml(rp.name) + '</button>';
+  }).join('');
+  if (t) {
+    return '' +
+    '<section class="card timer-card timer-dark running" aria-label="Timer running">' +
+      '<div class="timer-top"><h2>Timer running</h2><span class="pill live"><span class="dot"></span>Live</span></div>' +
+      '<div class="timer-elapsed" id="timer-elapsed" role="timer" aria-live="off">' + formatElapsed(timerElapsedMs(t.startMs, Date.now())) + '</div>' +
+      '<p class="timer-sub">Started <strong>' + escapeHtml(fmtDateTime(t.startMs)) + '</strong> · ' + escapeHtml(pname) +
+        (desc ? ' · “' + escapeHtml(desc) + '”' : '') + '</p>' +
+      '<span class="timer-amount' + ((!p || !billDefault || !(p.rate > 0)) ? ' nonbill' : '') + '" id="timer-amount">' +
+        escapeHtml(liveAmountText(t, timerElapsedMs(t.startMs, Date.now()))) + '</span>' +
+      '<div class="row-btns timer-actions">' +
+        '<button class="btn-stop" id="btn-stop">Stop &amp; save entry</button>' +
+        '<button class="btn ghost light-ghost" id="btn-discard">Discard</button>' +
+      '</div>' +
+      '<p class="timer-hint">Stopping saves an entry to Today below. Safe to refresh — the timer uses timestamps, not counters.</p>' +
+    '</section>';
+  }
   return '' +
-  '<section class="card timer-card" aria-label="Time tracker">' +
-    '<div class="timer-top"><h2>' + (t ? 'Timer running' : 'Start a timer') + '</h2>' +
-    (t ? '<span class="pill live"><span class="dot"></span>Live</span>' : '') + '</div>' +
-    '<div class="timer-elapsed" id="timer-elapsed" role="timer" aria-live="off">' +
-      (t ? formatElapsed(timerElapsedMs(t.startMs, Date.now())) : '00:00:00') + '</div>' +
-    (t ? '<p class="muted">Started ' + escapeHtml(fmtDateTime(t.startMs)) + ' · ' + escapeHtml(clientName((projectById(t.projectId) || {}).clientId) + ' · ' + ((projectById(t.projectId) || {}).name || '')) + '</p>' : '') +
+  '<section class="card timer-card timer-dark" aria-label="Start a timer">' +
+    '<div class="timer-top"><h2>What are you working on?</h2></div>' +
+    '<div class="timer-elapsed idle" aria-hidden="true">00:00:00</div>' +
+    '<p class="timer-sub">Pick a project, describe the task, press Start. That is the whole workflow.</p>' +
+    (recents ? '<div class="recents" aria-label="Recent projects"><span>Recent:</span> ' + recents + '</div>' : '') +
     '<div class="form-grid">' +
       '<div><label for="timer-project">Project</label>' +
-      '<select id="timer-project"' + (t ? ' disabled' : '') + '>' + projectOptions(proj) + '</select></div>' +
-      '<div><label for="timer-desc">Task note <span class="opt">(optional)</span></label>' +
-      '<input id="timer-desc" type="text" maxlength="140" placeholder="e.g. Homepage wireframes"' + (t ? ' disabled value="' + escapeHtml(desc) + '"' : '') + '></div>' +
+      '<select id="timer-project">' + projectOptions(proj) + '</select>' +
+      '<button class="linkbtn light" id="btn-timer-new-project">+ New project</button></div>' +
+      '<div><label for="timer-desc">What task? <span class="opt">(optional, helps invoicing)</span></label>' +
+      '<input id="timer-desc" type="text" maxlength="140" placeholder="e.g. Homepage wireframes v2"></div>' +
+      '<div class="span2"><label class="check"><input id="timer-billable" type="checkbox"' + (billDefault ? ' checked' : '') + '> Billable at ' +
+        escapeHtml(money(Math.round(((p && p.rate) || 0) * 100))) + '/hr</label></div>' +
     '</div>' +
-    (t
-      ? '<button class="btn-stop" id="btn-stop">Stop timer</button>'
-      : '<button class="btn-start" id="btn-start">Start timer</button>') +
+    '<button class="btn-start" id="btn-start">▶ Start timer</button>' +
+    '<p class="timer-hint">Tip: press <kbd>S</kbd> to start/stop. Timer keeps running if you refresh or close the tab.</p>' +
   '</section>';
 }
 
@@ -394,53 +487,94 @@ function renderEntryForm() {
   var proj = editing ? editing.projectId : (activeProjects()[0] ? activeProjects()[0].id : '');
   var bill = editing ? editing.billable : true;
   return '' +
-  '<section class="card" aria-label="' + (editing ? 'Edit time entry' : 'Add time manually') + '">' +
-    '<h2>' + (editing ? 'Edit entry' : 'Add time manually') + '</h2>' +
+  '<details class="card manual"' + (editing ? ' open' : '') + ' aria-label="' + (editing ? 'Edit time entry' : 'Add time manually') + '">' +
+    '<summary class="manual-sum"><span><b>' + (editing ? 'Edit entry' : 'Forgot to start the timer? Add time manually') + '</b>' +
+    '<small>For past work — date, start &amp; end, done.</small></span><span class="sum-chev" aria-hidden="true">＋</span></summary>' +
     '<div id="form-errors" class="form-errors" role="alert" hidden></div>' +
     '<div class="form-grid">' +
       '<div><label for="f-date">Date</label><input id="f-date" type="date" value="' + d + '" required></div>' +
       '<div><label for="f-project">Project</label><select id="f-project">' + projectOptions(proj) + '</select></div>' +
       '<div><label for="f-start">Start</label><input id="f-start" type="time" value="' + s + '" required></div>' +
-      '<div><label for="f-end">End <span class="opt">(next day if earlier than start)</span></label><input id="f-end" type="time" value="' + e + '" required></div>' +
-      '<div class="span2"><label for="f-desc">Description <span class="opt">(optional)</span></label>' +
+      '<div><label for="f-end">End <span class="opt">(earlier than start = next day)</span></label><input id="f-end" type="time" value="' + e + '" required></div>' +
+      '<div class="span2"><label for="f-desc">What did you do? <span class="opt">(shows on the invoice)</span></label>' +
       '<input id="f-desc" type="text" maxlength="140" placeholder="e.g. Client feedback round 2" value="' + escapeHtml(editing ? editing.description : '') + '"></div>' +
       '<div><label class="check"><input id="f-billable" type="checkbox"' + (bill ? ' checked' : '') + '> Billable</label></div>' +
+      '<div class="dur-preview" aria-live="polite"><small>Duration</small><b id="dur-preview">—</b></div>' +
     '</div>' +
     '<div class="row-btns">' +
       '<button class="btn solid btn-inline" id="btn-save-entry">' + (editing ? 'Save changes' : 'Add entry') + '</button>' +
       (editing ? '<button class="btn ghost btn-inline" id="btn-cancel-edit">Cancel</button>' : '') +
     '</div>' +
-  '</section>';
+  '</details>';
 }
 
 function renderEntryList(list, title) {
   var tz = effectiveTimeZone();
+  var q = (ui.search || '').trim().toLowerCase();
+  var filtered = q ? list.filter(function (en) {
+    var pmap2 = {};
+    state.projects.forEach(function (p) { pmap2[p.id] = p; });
+    var p = pmap2[en.projectId] || { name: '' };
+    return ((en.description || '') + ' ' + p.name + ' ' + clientName(p.clientId)).toLowerCase().indexOf(q) >= 0;
+  }) : list;
+  var head = '<div class="list-head"><h2>' + title + ' <span class="count">' + list.length + '</span></h2>' +
+    (list.length > 2 ? '<input id="entry-search" type="search" placeholder="Filter today…" value="' + escapeHtml(ui.search || '') + '" aria-label="Filter today\'s entries">' : '') + '</div>';
   if (!list.length) {
     return '<section class="card"><h2>' + title + '</h2><div class="empty">' +
-      '<p><strong>No time entries yet.</strong></p><p class="muted">Start the timer above or add your first manual entry — it will show up here.</p></div></section>';
+      '<p><strong>Nothing here yet — that is normal.</strong></p><p class="muted">Press <b>Start timer</b> above when work begins, <b>Stop &amp; save</b> when it ends. Your entry lands here with hours + amount calculated.</p>' +
+      '<p class="muted small">New here? <a href="guide-employee.html">Employee quick-start (60 sec)</a> · <a href="guide-employer.html">Owner quick-start</a></p></div></section>';
+  }
+  if (!filtered.length) {
+    return '<section class="card">' + head + '<div class="empty"><p class="muted">No entries match “' + escapeHtml(ui.search) + '”. <button class="linkbtn" id="btn-clear-search">Clear filter</button></p></div></section>';
   }
   var pmap = {}; state.projects.forEach(function (p) { pmap[p.id] = p; });
-  var rows = list.map(function (en) {
+  var rows = filtered.map(function (en) {
     var p = pmap[en.projectId] || { name: '(deleted project)', rate: 0, clientId: null };
     var ms = entryDurationMs(en.startMs, en.endMs);
     var cents = en.billable ? calcCents(msToHours(ms), p.rate || 0) : 0;
     return '<li class="entry">' +
       '<div class="entry-main"><strong>' + escapeHtml(p.name) + '</strong>' +
-      '<span class="muted">' + escapeHtml(clientName(p.clientId)) + ' · ' + escapeHtml(tzDateKey(en.startMs, tz)) + ' · ' +
-      escapeHtml(fmtTime(en.startMs)) + '–' + escapeHtml(fmtTime(en.endMs)) + ' · ' + msToHours(ms).toFixed(2) + 'h' +
+      '<span class="muted">' + escapeHtml(clientName(p.clientId)) + ' · ' +
+      escapeHtml(fmtTime(en.startMs)) + '–' + escapeHtml(fmtTime(en.endMs)) +
+      '<span class="hchip">' + msToHours(ms).toFixed(2) + 'h</span>' +
       (en.description ? ' · ' + escapeHtml(en.description) : '') + '</span></div>' +
       '<div class="entry-side"><span class="pill ' + (en.billable ? 'bill' : 'nonbill') + '">' + (en.billable ? money(cents) + ' · billable' : 'non-billable') + '</span>' +
       '<button class="linkbtn" data-edit="' + en.id + '">Edit</button>' +
       '<button class="linkbtn danger" data-del="' + en.id + '">Delete</button></div></li>';
   }).join('');
-  return '<section class="card"><h2>' + title + ' <span class="count">' + list.length + '</span></h2><ul class="entries">' + rows + '</ul></section>';
+  return '<section class="card">' + head + '<ul class="entries">' + rows + '</ul></section>';
+}
+
+function renderHelpStrip() {
+  return '<div class="help-strip" aria-label="Help">' +
+    '<span><b>New here?</b> Learn the workflow in 60 seconds:</span>' +
+    '<span class="help-links"><button class="linkbtn" id="btn-tour">Take the guided tour</button> · ' +
+    '<a href="guide-employee.html">If you log hours</a> · <a href="guide-employer.html">If you review / invoice</a></span></div>';
+}
+
+function renderWelcome() {
+  if (state.onboarded) return '';
+  var hasData = state.clients.length || state.projects.length || state.entries.length;
+  return '<section class="card welcome" aria-label="Welcome">' +
+    '<div class="welcome-main"><h2>Welcome — here is the whole app in 3 steps</h2>' +
+    '<ol class="welcome-steps"><li><b>Start</b> the timer when work begins</li><li><b>Stop</b> when it ends — entry saved</li><li><b>Review</b> in Reports, export CSV for invoices</li></ol></div>' +
+    '<div class="row-btns"><button class="btn solid btn-inline" id="btn-welcome-got">Got it, hide this</button> ' +
+    (hasData ? '' : '<button class="btn ghost btn-inline" id="btn-welcome-sample">Show me with sample data</button>') + '</div></section>';
 }
 
 function renderTracker() {
-  var today = tzDateKey(Date.now(), effectiveTimeZone());
-  var list = state.entries.filter(function (en) { return tzDateKey(en.startMs, effectiveTimeZone()) === today; })
+  var tz = effectiveTimeZone();
+  var today = tzDateKey(Date.now(), tz);
+  var list = state.entries.filter(function (en) { return tzDateKey(en.startMs, tz) === today; })
     .sort(function (a, b) { return b.startMs - a.startMs; });
-  return renderTimerCard() + renderEntryForm() + renderEntryList(list, "Today's entries");
+  var pmap = {};
+  state.projects.forEach(function (p) { pmap[p.id] = p; });
+  var sum = summarize(list, pmap);
+  var strip = '<div class="today-strip" aria-label="Today at a glance">' +
+    '<div class="today-cell"><small>Today</small><b>' + msToHours(sum.totalMs).toFixed(2) + '<em>h</em></b></div>' +
+    '<div class="today-cell"><small>Billable</small><b>' + money(sum.billCents) + '</b></div>' +
+    '<div class="today-cell"><small>Entries</small><b>' + list.length + '</b></div></div>';
+  return renderWelcome() + renderHelpStrip() + renderTimerCard() + strip + renderEntryForm() + renderEntryList(list, "Today's entries");
 }
 
 function renderLibrary() {
@@ -537,27 +671,64 @@ function renderSettings() {
     '<p><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="./">Back to homepage</a></p></section>';
 }
 
-function renderOnboarding() {
-  if (state.onboarded) return '';
-  var step = state.role ? 2 : 1;
-  var inner;
-  if (step === 1) {
-    inner = '<h2>What do you do?</h2><p class="muted">This tailors nothing but the example text — skip anytime.</p>' +
-      '<div class="role-grid">' +
-      ['freelancer', 'consultant', 'agency', 'other'].map(function (r) {
-        return '<button class="role" data-role="' + r + '">' + r.charAt(0).toUpperCase() + r.slice(1) + '</button>';
-      }).join('') + '</div>' +
-      '<button class="linkbtn" id="btn-skip-ob">Skip onboarding →</button>';
-  } else {
-    inner = '<h2>Create your first client &amp; project</h2><p class="muted">Real records — or add the sample set to explore (clearly labeled, deletable).</p>' +
-      '<div class="form-grid"><div><label for="ob-client">Client name</label><input id="ob-client" type="text" maxlength="80" placeholder="e.g. Acme Studio"></div>' +
-      '<div><label for="ob-project">Project name</label><input id="ob-project" type="text" maxlength="80" placeholder="e.g. Website redesign"></div>' +
-      '<div><label for="ob-rate">Hourly rate (' + escapeHtml(state.settings.currency) + ')</label><input id="ob-rate" type="number" min="0" step="0.01" placeholder="e.g. 85"></div></div>' +
-      '<div class="row-btns"><button class="btn solid btn-inline" id="btn-ob-create">Create &amp; start tracking</button> ' +
-      '<button class="btn ghost btn-inline" id="btn-ob-sample">Use sample data</button> ' +
-      '<button class="linkbtn" id="btn-skip-ob">Skip →</button></div>';
+function renderOnboarding() { return ''; } // replaced by non-blocking welcome banner (renderWelcome)
+
+function renderModal() {
+  var m = ui.modal;
+  if (!m) return '';
+  var inner = '';
+  if (m.type === 'client') {
+    inner = '<h2>New client</h2><p class="muted">Who pays the invoice?</p>' +
+      '<div class="form-grid"><div class="span2"><label for="m-client-name">Client name</label>' +
+      '<input id="m-client-name" type="text" maxlength="80" placeholder="e.g. Acme Studio"></div></div>' +
+      '<div class="row-btns"><button class="btn solid btn-inline" id="m-save">Add client</button> ' +
+      '<button class="btn ghost btn-inline" id="m-cancel">Cancel</button></div>';
+  } else if (m.type === 'project') {
+    var copts = state.clients.map(function (c) {
+      return '<option value="' + c.id + '"' + (c.id === m.clientId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join('') || '<option value="">No clients yet</option>';
+    inner = '<h2>New project</h2><p class="muted">Projects belong to a client and carry an hourly rate.</p>' +
+      '<div class="form-grid"><div><label for="m-proj-client">Client</label><select id="m-proj-client">' + copts + '</select></div>' +
+      '<div><label for="m-proj-name">Project name</label><input id="m-proj-name" type="text" maxlength="80" placeholder="e.g. Website redesign"></div>' +
+      '<div><label for="m-proj-rate">Hourly rate (' + escapeHtml(state.settings.currency) + ')</label><input id="m-proj-rate" type="number" min="0" step="0.01" placeholder="e.g. 85"></div>' +
+      '<div><label class="check"><input id="m-proj-bill" type="checkbox" checked> Billable by default</label></div></div>' +
+      '<div class="row-btns"><button class="btn solid btn-inline" id="m-save">Add project</button> ' +
+      '<button class="btn ghost btn-inline" id="m-cancel">Cancel</button></div>';
+  } else if (m.type === 'rename-client') {
+    var c0 = state.clients.filter(function (x) { return x.id === m.id; })[0];
+    inner = '<h2>Rename client</h2><div class="form-grid"><div class="span2"><label for="m-rename">Name</label>' +
+      '<input id="m-rename" type="text" maxlength="80" value="' + escapeHtml(c0 ? c0.name : '') + '"></div></div>' +
+      '<div class="row-btns"><button class="btn solid btn-inline" id="m-save">Save</button> ' +
+      '<button class="btn ghost btn-inline" id="m-cancel">Cancel</button></div>';
+  } else if (m.type === 'edit-project') {
+    var p0 = projectById(m.id);
+    inner = '<h2>Edit project</h2><div class="form-grid">' +
+      '<div><label for="m-proj-name">Project name</label><input id="m-proj-name" type="text" maxlength="80" value="' + escapeHtml(p0 ? p0.name : '') + '"></div>' +
+      '<div><label for="m-proj-rate">Hourly rate (' + escapeHtml(state.settings.currency) + ')</label><input id="m-proj-rate" type="number" min="0" step="0.01" value="' + escapeHtml(String((p0 && p0.rate) || 0)) + '"></div></div>' +
+      '<div class="row-btns"><button class="btn solid btn-inline" id="m-save">Save</button> ' +
+      '<button class="btn ghost btn-inline" id="m-cancel">Cancel</button></div>';
+  } else if (m.type === 'confirm') {
+    inner = '<h2>' + escapeHtml(m.title || 'Are you sure?') + '</h2><p class="muted">' + escapeHtml(m.message || '') + '</p>' +
+      '<div class="row-btns"><button class="btn solid btn-inline danger-solid" id="m-save">' + escapeHtml(m.confirmLabel || 'Delete') + '</button> ' +
+      '<button class="btn ghost btn-inline" id="m-cancel">Keep it</button></div>';
   }
-  return '<div class="ob-overlay"><div class="ob-card" role="dialog" aria-modal="true" aria-label="Getting started">' + inner + '</div></div>';
+  return '<div class="ob-overlay" id="modal-overlay"><div class="ob-card" role="dialog" aria-modal="true" aria-label="Dialog">' + inner + '</div></div>';
+}
+
+var TOUR_STEPS = [
+  { t: 'Step 1 — Start the timer', d: 'Pick a project, type what you are doing, press Start. The timer shows elapsed time and live earnings. Refresh-safe: it uses timestamps.' },
+  { t: 'Step 2 — Stop, review today', d: 'Press “Stop & save entry”. The entry lands in Today\u2019s entries with hours + amount. Use “Add time manually” only for past work you forgot to time.' },
+  { t: 'Step 3 — Report & invoice', d: 'Open Reports → pick This week → check totals by client → Export CSV and attach it to your invoice. Settings holds currency, time zone, backup and delete.' }
+];
+
+function renderTour() {
+  if (!ui.tourStep) return '';
+  var s = TOUR_STEPS[ui.tourStep - 1];
+  return '<div class="ob-overlay"><div class="ob-card tour" role="dialog" aria-modal="true" aria-label="Guided tour">' +
+    '<p class="tour-count">Guided tour · ' + ui.tourStep + ' of ' + TOUR_STEPS.length + '</p>' +
+    '<h2>' + escapeHtml(s.t) + '</h2><p class="muted">' + escapeHtml(s.d) + '</p>' +
+    '<div class="row-btns"><button class="btn solid btn-inline" id="btn-tour-next">' + (ui.tourStep >= TOUR_STEPS.length ? 'Finish tour' : 'Next →') + '</button> ' +
+    '<button class="linkbtn" id="btn-tour-skip">Skip tour</button></div></div></div>';
 }
 
 function renderNotFound() {
@@ -579,18 +750,22 @@ var hashBound = false;
 function render() {
   try { var r0 = parseAppHash(window.location.hash); if (r0) ui.view = r0.view; } catch (e) {}
   var app = document.getElementById('app');
-  var html = renderOnboarding();
-  html += '<div class="tabs" role="tablist" aria-label="Tracker sections">' +
-    [['tracker', 'Tracker'], ['library', 'Clients & projects'], ['reports', 'Reports'], ['settings', 'Settings']].map(function (t) {
-      return '<button role="tab" aria-selected="' + (ui.view === t[0]) + '" class="tab' + (ui.view === t[0] ? ' on' : '') + '" data-view="' + t[0] + '">' + t[1] + '</button>';
+  var tabs = [['tracker', 'Tracker', 'Today + timer'], ['library', 'Clients & projects', 'Rates + setup'], ['reports', 'Reports', 'Totals + CSV'], ['settings', 'Settings', 'Currency + backup']];
+  var html = '<div class="tabs" role="tablist" aria-label="Tracker sections">' +
+    tabs.map(function (t) {
+      var count = t[0] === 'tracker' ? state.entries.length : (t[0] === 'library' ? state.projects.length : '');
+      return '<button role="tab" aria-selected="' + (ui.view === t[0]) + '" class="tab' + (ui.view === t[0] ? ' on' : '') + '" data-view="' + t[0] + '" title="' + t[2] + '">' + t[1] +
+        (count !== '' && count ? ' <span class="tab-count">' + count + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   if (ui.view === 'tracker') html += renderTracker();
   else if (ui.view === 'library') html += renderLibrary();
   else if (ui.view === 'reports') html += renderReports();
   else if (ui.view === 'notfound') html += renderNotFound();
   else html += renderSettings();
+  html += renderModal() + renderTour();
   app.innerHTML = html;
   bind();
+  updateDurPreview();
   clearInterval(ui.tickTimer);
   if (state.activeTimer) ui.tickTimer = setInterval(tick, 1000);
   if (!hashBound) {
@@ -601,7 +776,39 @@ function render() {
         if (r && r.view !== ui.view) { ui.view = r.view; render(); }
       } catch (e) {}
     });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && (ui.modal || ui.tourStep)) { ui.modal = null; ui.tourStep = 0; render(); }
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if ((e.key === 's' || e.key === 'S') && tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA' && ui.view === 'tracker' && !ui.modal && !ui.tourStep) {
+        e.preventDefault();
+        if (state.activeTimer) stopTimer(); else { var b = document.getElementById('btn-start'); if (b) b.click(); }
+      }
+    });
   }
+}
+
+/** Refresh the live duration preview under the manual-entry form. */
+function updateDurPreview() {
+  var el = document.getElementById('dur-preview');
+  if (!el) return;
+  var ms = previewDurationMs(val('f-date'), val('f-start'), val('f-end'));
+  if (!ms) { el.textContent = '—'; return; }
+  var p = projectById(val('f-project'));
+  var rate = (p && p.rate) || 0;
+  var bill = document.getElementById('f-billable');
+  var isBill = bill ? bill.checked : true;
+  el.textContent = msToHours(ms).toFixed(2) + 'h' + (isBill && rate > 0 ? ' · ≈ ' + money(calcCents(msToHours(ms), rate)) : '');
+}
+
+function addSampleData() {
+  var now = Date.now();
+  var cid = uid(), pid = uid();
+  state.clients.push({ id: cid, name: 'Sample client (example — delete anytime)', archived: false, createdAt: now });
+  state.projects.push({ id: pid, clientId: cid, name: 'Sample project (example)', rate: 85, billableDefault: true, archived: false, createdAt: now });
+  state.entries.push({ id: uid(), projectId: pid, startMs: now - 2 * 3600 * 1000, endMs: now - 3600 * 1000, description: 'Sample entry (example)', billable: true, createdAt: now });
+  state.onboarded = true; saveState(state);
+  window.hkTrack('onboarding_completed', { sample: true });
+  ui.view = 'tracker'; render(); toast('Sample data added — clearly labeled, delete anytime.');
 }
 
 /* ---------- events (delegated) ---------- */
@@ -614,41 +821,73 @@ function bind() {
   document.querySelectorAll('[data-go]').forEach(function (b) {
     b.onclick = function () { setRoute(b.getAttribute('data-go')); };
   });
-  document.querySelectorAll('[data-role]').forEach(function (b) {
-    b.onclick = function () { state.role = b.getAttribute('data-role'); saveState(state); window.hkTrack('onboarding_role', { role: state.role }); render(); };
-  });
-  var skip = document.getElementById('btn-skip-ob');
-  if (skip) skip.onclick = function () { state.onboarded = true; saveState(state); window.hkTrack('onboarding_skipped', {}); render(); };
-  var obCreate = document.getElementById('btn-ob-create');
-  if (obCreate) obCreate.onclick = function () {
-    var cn = val('ob-client').trim(), pn = val('ob-project').trim(), rate = parseFloat(val('ob-rate'));
-    if (!cn) { toast('Give your client a name.', 'error'); return; }
-    if (!pn) { toast('Give your project a name.', 'error'); return; }
-    if (val('ob-rate') && !(rate >= 0)) { toast('Hourly rate must be zero or more.', 'error'); return; }
+
+  // welcome + tour
+  var wg = document.getElementById('btn-welcome-got');
+  if (wg) wg.onclick = function () { state.onboarded = true; saveState(state); render(); };
+  var ws = document.getElementById('btn-welcome-sample');
+  if (ws) ws.onclick = addSampleData;
+  var bt = document.getElementById('btn-tour');
+  if (bt) bt.onclick = function () { ui.tourStep = 1; render(); window.hkTrack('tour_started', {}); };
+  var btnNext = document.getElementById('btn-tour-next');
+  if (btnNext) btnNext.onclick = function () {
+    if (ui.tourStep >= TOUR_STEPS.length) { ui.tourStep = 0; state.onboarded = true; saveState(state); render(); toast('Tour done — start your first timer.'); }
+    else { ui.tourStep++; render(); }
+  };
+  var btnSkip = document.getElementById('btn-tour-skip');
+  if (btnSkip) btnSkip.onclick = function () { ui.tourStep = 0; render(); };
+
+  // setup wizard (zero-project state)
+  var wz = document.getElementById('btn-wizard-create');
+  if (wz) wz.onclick = function () {
+    var cn = val('wz-client').trim(), pn = val('wz-project').trim(), rate = parseFloat(val('wz-rate'));
+    if (!cn) { toast('Name your client first — e.g. Acme Studio.', 'error'); return; }
+    if (!pn) { toast('Name the project — e.g. Website redesign.', 'error'); return; }
+    if (val('wz-rate') !== '' && !(rate >= 0)) { toast('Hourly rate must be zero or more.', 'error'); return; }
+    var bill = document.getElementById('wz-billable').checked;
     var cid = uid(), pid = uid();
     state.clients.push({ id: cid, name: cn, archived: false, createdAt: Date.now() });
-    state.projects.push({ id: pid, clientId: cid, name: pn, rate: isFinite(rate) ? rate : 0, billableDefault: true, archived: false, createdAt: Date.now() });
+    state.projects.push({ id: pid, clientId: cid, name: pn, rate: isFinite(rate) ? rate : 0, billableDefault: bill, archived: false, createdAt: Date.now() });
     state.onboarded = true; saveState(state);
     window.hkTrack('onboarding_completed', {}); window.hkTrack('first_project_created', {});
-    ui.view = 'tracker'; render(); toast('Client and project created — start your first timer.');
+    render(); toast('Ready — press Start timer when work begins.');
   };
-  var obSample = document.getElementById('btn-ob-sample');
-  if (obSample) obSample.onclick = function () {
-    var cid = uid(), pid = uid(), now = Date.now();
-    state.clients.push({ id: cid, name: 'Sample client (example — delete anytime)', archived: false, createdAt: now });
-    state.projects.push({ id: pid, clientId: cid, name: 'Sample project (example)', rate: 85, billableDefault: true, archived: false, createdAt: now });
-    state.entries.push({ id: uid(), projectId: pid, startMs: now - 2 * 3600 * 1000, endMs: now - 3600 * 1000, description: 'Sample entry (example)', billable: true, createdAt: now });
-    state.onboarded = true; saveState(state);
-    window.hkTrack('onboarding_completed', { sample: true });
-    ui.view = 'tracker'; render(); toast('Sample data added — clearly labeled, delete anytime.');
-  };
+  var wzs = document.getElementById('btn-wizard-sample');
+  if (wzs) wzs.onclick = addSampleData;
 
+  // timer
+  document.querySelectorAll('[data-recent]').forEach(function (b) {
+    b.onclick = function () {
+      var sel = document.getElementById('timer-project');
+      if (sel) { sel.value = b.getAttribute('data-recent'); sel.dispatchEvent(new Event('change')); render(); }
+    };
+  });
+  var tp = document.getElementById('timer-project');
+  if (tp) tp.onchange = function () {
+    var p = projectById(tp.value);
+    var cb = document.getElementById('timer-billable');
+    if (cb && p) cb.checked = p.billableDefault !== false;
+    var lbl = cb ? cb.parentElement : null;
+    if (lbl && p) lbl.lastChild.textContent = ' Billable at ' + money(Math.round((p.rate || 0) * 100)) + '/hr';
+  };
+  var tnp = document.getElementById('btn-timer-new-project');
+  if (tnp) tnp.onclick = function () {
+    if (!state.clients.length) { ui.modal = { type: 'client', after: 'project' }; render(); }
+    else { ui.modal = { type: 'project' }; render(); }
+  };
   var bs = document.getElementById('btn-start');
   if (bs) bs.onclick = function () {
-    if (startTimer(val('timer-project'), val('timer-desc').trim())) { window.hkTrack('first_timer_started', {}); announce('Timer started.'); }
+    var billEl = document.getElementById('timer-billable');
+    var bill = billEl ? billEl.checked : true;
+    if (startTimer(val('timer-project'), val('timer-desc').trim(), bill)) { window.hkTrack('first_timer_started', {}); announce('Timer started.'); }
   };
   var bp = document.getElementById('btn-stop');
   if (bp) bp.onclick = function () { stopTimer(); announce('Timer stopped and saved.'); };
+  var bd = document.getElementById('btn-discard');
+  if (bd) bd.onclick = function () {
+    ui.modal = { type: 'confirm', title: 'Discard running timer?', message: 'The elapsed time will be thrown away. This cannot be undone.', confirmLabel: 'Discard timer', action: 'discard-timer' };
+    render();
+  };
 
   var se = document.getElementById('btn-save-entry');
   if (se) se.onclick = function () {
@@ -662,81 +901,119 @@ function bind() {
       announce('Entry has errors: ' + errs.join(' '));
     } else { toast(ui.editingEntryId ? 'Entry updated.' : 'Entry added.'); }
   };
+  ['f-date', 'f-start', 'f-end', 'f-project', 'f-billable'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.addEventListener('input', updateDurPreview); el.addEventListener('change', updateDurPreview); }
+  });
   var ce = document.getElementById('btn-cancel-edit');
   if (ce) ce.onclick = function () { ui.editingEntryId = null; render(); };
+  var es = document.getElementById('entry-search');
+  if (es) es.oninput = function () { ui.search = es.value; var pos = es.selectionStart; render(); var n = document.getElementById('entry-search'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } };
+  var cs = document.getElementById('btn-clear-search');
+  if (cs) cs.onclick = function () { ui.search = ''; render(); };
 
   document.querySelectorAll('[data-edit]').forEach(function (b) {
-    b.onclick = function () { ui.editingEntryId = b.getAttribute('data-edit'); ui.view = 'tracker'; render(); window.scrollTo(0, 0); };
+    b.onclick = function () { ui.editingEntryId = b.getAttribute('data-edit'); ui.view = 'tracker'; ui.search = ''; render(); window.scrollTo(0, 0); };
   });
   document.querySelectorAll('[data-del]').forEach(function (b) {
     b.onclick = function () {
-      if (!window.confirm('Delete this entry? This cannot be undone.')) return;
-      state.entries = state.entries.filter(function (x) { return x.id !== b.getAttribute('data-del'); });
-      saveState(state); render(); toast('Entry deleted.');
+      ui.modal = { type: 'confirm', title: 'Delete this entry?', message: 'Hours and amount will be removed. This cannot be undone.', confirmLabel: 'Delete entry', action: 'del-entry', id: b.getAttribute('data-del') };
+      render();
     };
   });
 
-  var ac = document.getElementById('btn-add-client');
-  if (ac) ac.onclick = function () {
-    var name = (window.prompt('Client name:') || '').trim();
-    if (!name) return;
-    state.clients.push({ id: uid(), name: name, archived: false, createdAt: Date.now() });
-    saveState(state); window.hkTrack('first_project_created', {}); render(); toast('Client added.');
-  };
-  document.querySelectorAll('[data-cadd-p]').forEach(function (b) {
-    b.onclick = function () {
-      var cid = b.getAttribute('data-cadd-p');
-      var name = (window.prompt('Project name:') || '').trim();
-      if (!name) return;
-      var rate = parseFloat(window.prompt('Hourly rate (' + state.settings.currency + '), numbers only:', '0') || '0');
-      if (!(rate >= 0)) { toast('Rate must be zero or more.', 'error'); return; }
-      state.projects.push({ id: uid(), clientId: cid, name: name, rate: rate, billableDefault: true, archived: false, createdAt: Date.now() });
-      saveState(state); render(); toast('Project added.');
+  // modal buttons
+  var mc = document.getElementById('m-cancel');
+  if (mc) mc.onclick = function () { ui.modal = null; render(); };
+  var mo = document.getElementById('modal-overlay');
+  if (mo) mo.addEventListener('mousedown', function (e) { if (e.target === mo) { ui.modal = null; render(); } });
+  var msv = document.getElementById('m-save');
+  if (msv && ui.modal) (function (m) {
+    msv.onclick = function () {
+      if (m.type === 'client') {
+        var name = val('m-client-name').trim();
+        if (!name) { toast('Give the client a name.', 'error'); return; }
+        state.clients.push({ id: uid(), name: name, archived: false, createdAt: Date.now() });
+        saveState(state); window.hkTrack('first_project_created', {});
+        ui.modal = (m.after === 'project') ? { type: 'project', clientId: state.clients[state.clients.length - 1].id } : null;
+        render(); toast('Client added' + (ui.modal ? ' — now add the project.' : '.'));
+      } else if (m.type === 'project') {
+        var cid = val('m-proj-client');
+        var pname = val('m-proj-name').trim();
+        var rate = parseFloat(val('m-proj-rate'));
+        var bill = document.getElementById('m-proj-bill').checked;
+        if (!cid) { toast('Create a client first.', 'error'); return; }
+        if (!pname) { toast('Name the project.', 'error'); return; }
+        if (val('m-proj-rate') !== '' && !(rate >= 0)) { toast('Rate must be zero or more.', 'error'); return; }
+        state.projects.push({ id: uid(), clientId: cid, name: pname, rate: isFinite(rate) ? rate : 0, billableDefault: bill, archived: false, createdAt: Date.now() });
+        saveState(state); ui.modal = null; render(); toast('Project added — pick it and press Start.');
+      } else if (m.type === 'rename-client') {
+        var nn = val('m-rename').trim();
+        if (!nn) { toast('Name cannot be empty.', 'error'); return; }
+        var c = state.clients.filter(function (x) { return x.id === m.id; })[0];
+        if (c) c.name = nn;
+        saveState(state); ui.modal = null; render();
+      } else if (m.type === 'edit-project') {
+        var pp = projectById(m.id);
+        var nm = val('m-proj-name').trim();
+        var rt = parseFloat(val('m-proj-rate'));
+        if (!nm) { toast('Name cannot be empty.', 'error'); return; }
+        if (!(rt >= 0)) { toast('Rate must be zero or more.', 'error'); return; }
+        if (pp) { pp.name = nm; pp.rate = rt; }
+        saveState(state); ui.modal = null; render(); toast('Project updated.');
+      } else if (m.type === 'confirm') {
+        if (m.action === 'discard-timer') { state.activeTimer = null; saveState(state); ui.modal = null; render(); toast('Timer discarded.'); }
+        else if (m.action === 'del-entry') { state.entries = state.entries.filter(function (x) { return x.id !== m.id; }); saveState(state); ui.modal = null; render(); toast('Entry deleted.'); }
+        else if (m.action === 'del-client') {
+          state.clients = state.clients.filter(function (x) { return x.id !== m.id; });
+          state.projects = state.projects.filter(function (p) { return p.clientId !== m.id; });
+          saveState(state); ui.modal = null; render(); toast('Client deleted.');
+        }
+        else if (m.action === 'del-project') {
+          state.projects = state.projects.filter(function (p) { return p.id !== m.id; });
+          saveState(state); ui.modal = null; render(); toast('Project deleted.');
+        }
+        else if (m.action === 'wipe') {
+          try { localStorage.removeItem(LS_KEY); } catch (e) {}
+          state = sanitizeState(null);
+          ui.view = 'tracker'; ui.modal = null; saveState(state); render();
+          toast('All data deleted.');
+        }
+      }
     };
+  })(ui.modal);
+
+  var ac = document.getElementById('btn-add-client');
+  if (ac) ac.onclick = function () { ui.modal = { type: 'client' }; render(); var f = document.getElementById('m-client-name'); if (f) f.focus(); };
+  document.querySelectorAll('[data-cadd-p]').forEach(function (b) {
+    b.onclick = function () { ui.modal = { type: 'project', clientId: b.getAttribute('data-cadd-p') }; render(); };
   });
   document.querySelectorAll('[data-cedit]').forEach(function (b) {
-    b.onclick = function () {
-      var c = state.clients.filter(function (x) { return x.id === b.getAttribute('data-cedit'); })[0];
-      if (!c) return;
-      var name = (window.prompt('Rename client:', c.name) || '').trim();
-      if (!name) return;
-      c.name = name; saveState(state); render();
-    };
+    b.onclick = function () { ui.modal = { type: 'rename-client', id: b.getAttribute('data-cedit') }; render(); };
   });
   document.querySelectorAll('[data-cdel]').forEach(function (b) {
     b.onclick = function () {
       var cid = b.getAttribute('data-cdel');
       var n = state.projects.filter(function (p) { return p.clientId === cid; }).length;
-      if (!window.confirm('Delete this client and its ' + n + ' project(s)? Time entries are kept but will show “(deleted project)”. This cannot be undone.')) return;
-      state.clients = state.clients.filter(function (x) { return x.id !== cid; });
-      state.projects = state.projects.filter(function (p) { return p.clientId !== cid; });
-      saveState(state); render(); toast('Client deleted.');
+      ui.modal = { type: 'confirm', title: 'Delete this client?', message: 'Its ' + n + ' project(s) go too. Past time entries are kept but show “(deleted project)”.', confirmLabel: 'Delete client', action: 'del-client', id: cid };
+      render();
     };
   });
   document.querySelectorAll('[data-pedit]').forEach(function (b) {
-    b.onclick = function () {
-      var p = projectById(b.getAttribute('data-pedit'));
-      if (!p) return;
-      var name = (window.prompt('Project name:', p.name) || '').trim();
-      if (!name) return;
-      var rate = parseFloat(window.prompt('Hourly rate (' + state.settings.currency + '):', String(p.rate || 0)) || '0');
-      if (!(rate >= 0)) { toast('Rate must be zero or more.', 'error'); return; }
-      p.name = name; p.rate = rate; saveState(state); render(); toast('Project updated.');
-    };
+    b.onclick = function () { ui.modal = { type: 'edit-project', id: b.getAttribute('data-pedit') }; render(); };
   });
   document.querySelectorAll('[data-parch]').forEach(function (b) {
     b.onclick = function () {
       var p = projectById(b.getAttribute('data-parch'));
       if (!p) return;
       p.archived = !p.archived; saveState(state); render();
+      toast(p.archived ? 'Project archived — hidden from the timer.' : 'Project restored.');
     };
   });
   document.querySelectorAll('[data-pdel]').forEach(function (b) {
     b.onclick = function () {
-      if (!window.confirm('Delete this project? Its time entries are kept but will show “(deleted project)”. This cannot be undone.')) return;
-      var pid = b.getAttribute('data-pdel');
-      state.projects = state.projects.filter(function (p) { return p.id !== pid; });
-      saveState(state); render(); toast('Project deleted.');
+      ui.modal = { type: 'confirm', title: 'Delete this project?', message: 'Its time entries are kept but will show “(deleted project)”. This cannot be undone.', confirmLabel: 'Delete project', action: 'del-project', id: b.getAttribute('data-pdel') };
+      render();
     };
   });
 
@@ -771,12 +1048,8 @@ function bind() {
   };
   var wipe = document.getElementById('btn-wipe');
   if (wipe) wipe.onclick = function () {
-    if (!window.confirm('Permanently delete ALL HourKeep data in this browser? This cannot be undone.')) return;
-    if (!window.confirm('Last chance — every client, project and entry will be gone. Delete everything?')) return;
-    try { localStorage.removeItem(LS_KEY); } catch (e) {}
-    state = sanitizeState(null);
-    ui.view = 'tracker'; saveState(state); render();
-    toast('All data deleted.');
+    ui.modal = { type: 'confirm', title: 'Delete ALL data?', message: 'Every client, project and entry in this browser will be gone. Export a JSON backup first if unsure.', confirmLabel: 'Yes, delete everything', action: 'wipe' };
+    render();
   };
 }
 
